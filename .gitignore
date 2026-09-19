@@ -1,0 +1,43 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+**/application-local.yml
+**/application-prod.yml
+
+# Java / Maven
+backend/target/
+**/target/
+*.class
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# IDE and OS files
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+.DS_Store
+Thumbs.db
+
+# Logs and generated reports
+*.log
+*.tmp
+backend/posters/
+backend/backups/
+
+# Large source datasets (keep a small sample under docs/data if needed)
+backend/douban_movies.csv
+backend/douban_users.csv
+
+# Local database exports and compressed backups
+*.sql.gz
+*.dump
+
+*.bak
+*.swp
+coverage/
