@@ -3,10 +3,15 @@ package com.movierec.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.movierec.dto.UserProfileVO;
 import com.movierec.entity.User;
+import com.movierec.exception.BusinessException;
+import com.movierec.exception.ConflictException;
+import com.movierec.exception.ResourceNotFoundException;
+import com.movierec.exception.UnauthorizedException;
 import com.movierec.mapper.UserMapper;
 import com.movierec.service.UserService;
 import com.movierec.util.JwtUtil;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -27,7 +32,7 @@ public class UserServiceImpl implements UserService {
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(User::getUsername, username);
         if (userMapper.selectOne(wrapper) != null) {
-            throw new RuntimeException("用户名已存在");
+            throw new ConflictException("用户名已存在");
         }
 
         User user = new User();
@@ -46,7 +51,7 @@ public class UserServiceImpl implements UserService {
         User user = userMapper.selectOne(wrapper);
 
         if (user == null || !passwordEncoder.matches(password, user.getPassword())) {
-            throw new RuntimeException("用户名或密码错误");
+            throw new UnauthorizedException("用户名或密码错误");
         }
 
         return jwtUtil.generateToken(user.getId(), user.getUsername());
@@ -77,15 +82,15 @@ public class UserServiceImpl implements UserService {
     public UserProfileVO updateProfile(Long userId, String oldPassword, String newPassword, String preferences) {
         User user = userMapper.selectById(userId);
         if (user == null) {
-            throw new RuntimeException("用户不存在");
+            throw new ResourceNotFoundException("用户不存在");
         }
 
         if (oldPassword != null && !oldPassword.isEmpty()) {
             if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
-                throw new RuntimeException("原密码错误");
+                throw new BusinessException(HttpStatus.BAD_REQUEST, "原密码错误");
             }
             if (newPassword == null || newPassword.isEmpty()) {
-                throw new RuntimeException("新密码不能为空");
+                throw new BusinessException(HttpStatus.BAD_REQUEST, "新密码不能为空");
             }
             user.setPassword(passwordEncoder.encode(newPassword));
         }

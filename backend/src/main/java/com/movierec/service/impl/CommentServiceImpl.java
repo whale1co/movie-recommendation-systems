@@ -3,10 +3,12 @@ package com.movierec.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.movierec.dto.CommentVO;
 import com.movierec.dto.MyCommentVO;
+import com.movierec.dto.response.LikeResponse;
 import com.movierec.entity.Comment;
 import com.movierec.entity.CommentLike;
 import com.movierec.entity.Movie;
 import com.movierec.entity.User;
+import com.movierec.exception.ResourceNotFoundException;
 import com.movierec.mapper.CommentLikeMapper;
 import com.movierec.mapper.CommentMapper;
 import com.movierec.mapper.MovieMapper;
@@ -35,6 +37,9 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     public CommentVO addComment(Long userId, Long movieId, String content) {
+        if (movieMapper.selectById(movieId) == null) {
+            throw new ResourceNotFoundException("电影不存在");
+        }
         Comment comment = new Comment();
         comment.setUserId(userId);
         comment.setMovieId(movieId);
@@ -96,7 +101,7 @@ public class CommentServiceImpl implements CommentService {
     }
 
     @Override
-    public Map<String, Object> toggleLike(Long userId, Long commentId) {
+    public LikeResponse toggleLike(Long userId, Long commentId) {
         LambdaQueryWrapper<CommentLike> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(CommentLike::getUserId, userId)
                .eq(CommentLike::getCommentId, commentId);
@@ -104,7 +109,7 @@ public class CommentServiceImpl implements CommentService {
 
         Comment comment = commentMapper.selectById(commentId);
         if (comment == null) {
-            throw new RuntimeException("评论不存在");
+            throw new ResourceNotFoundException("评论不存在");
         }
 
         boolean liked;
@@ -124,10 +129,7 @@ public class CommentServiceImpl implements CommentService {
         }
         commentMapper.updateById(comment);
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("liked", liked);
-        result.put("likeCount", comment.getLikeCount());
-        return result;
+        return new LikeResponse(liked, comment.getLikeCount());
     }
 
     @Override

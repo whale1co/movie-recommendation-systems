@@ -1,24 +1,31 @@
 package com.movierec.controller;
 
+import com.movierec.common.ApiResponse;
 import com.movierec.dto.FavoriteVO;
 import com.movierec.dto.RatingVO;
 import com.movierec.dto.UserProfileVO;
+import com.movierec.dto.request.UpdateProfileRequest;
 import com.movierec.entity.User;
+import com.movierec.exception.ResourceNotFoundException;
 import com.movierec.service.FavoriteService;
 import com.movierec.service.RatingService;
 import com.movierec.service.UserService;
-import com.movierec.util.Result;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
+@Tag(name = "当前用户")
 @RestController
-@RequestMapping("/api/user")
+@RequestMapping("/api/v1/users/me")
 public class UserController {
-
     private final UserService userService;
     private final RatingService ratingService;
     private final FavoriteService favoriteService;
@@ -29,70 +36,35 @@ public class UserController {
         this.favoriteService = favoriteService;
     }
 
-    @PostMapping("/register")
-    public Result<Map<String, Object>> register(@RequestBody Map<String, String> body) {
-        String username = body.get("username");
-        String password = body.get("password");
-        String preferences = body.get("preferences");
-
-        try {
-            User user = userService.register(username, password, preferences);
-            Map<String, Object> data = new HashMap<>();
-            data.put("userId", user.getId());
-            return Result.success("注册成功", data);
-        } catch (RuntimeException e) {
-            return Result.error(400, e.getMessage());
-        }
-    }
-
-    @PostMapping("/login")
-    public Result<Map<String, Object>> login(@RequestBody Map<String, String> body) {
-        String username = body.get("username");
-        String password = body.get("password");
-
-        try {
-            String token = userService.login(username, password);
-            Map<String, Object> data = new HashMap<>();
-            data.put("token", token);
-            return Result.success("登录成功", data);
-        } catch (RuntimeException e) {
-            return Result.error(401, e.getMessage());
-        }
-    }
-
-    @GetMapping("/me")
-    public Result<UserProfileVO> getProfile(@AuthenticationPrincipal User currentUser) {
+    @Operation(summary = "查看本人资料")
+    @GetMapping
+    public ApiResponse<UserProfileVO> getProfile(@AuthenticationPrincipal User currentUser) {
         UserProfileVO profile = userService.getProfile(currentUser.getId());
         if (profile == null) {
-            return Result.error(404, "用户不存在");
+            throw new ResourceNotFoundException("用户不存在");
         }
-        return Result.success("查询成功", profile);
+        return ApiResponse.success("查询成功", profile);
     }
 
-    @PutMapping("/profile")
-    public Result<UserProfileVO> updateProfile(@AuthenticationPrincipal User currentUser,
-                                               @RequestBody Map<String, String> body) {
-        String oldPassword = body.get("oldPassword");
-        String newPassword = body.get("newPassword");
-        String preferences = body.get("preferences");
-
-        try {
-            UserProfileVO profile = userService.updateProfile(currentUser.getId(), oldPassword, newPassword, preferences);
-            return Result.success("修改成功", profile);
-        } catch (RuntimeException e) {
-            return Result.error(400, e.getMessage());
-        }
+    @Operation(summary = "修改本人资料")
+    @PatchMapping
+    public ApiResponse<UserProfileVO> updateProfile(
+            @AuthenticationPrincipal User currentUser,
+            @Valid @RequestBody UpdateProfileRequest request) {
+        UserProfileVO profile = userService.updateProfile(currentUser.getId(), request.oldPassword(),
+                request.newPassword(), request.preferences());
+        return ApiResponse.success("修改成功", profile);
     }
 
+    @Operation(summary = "查看本人评分")
     @GetMapping("/ratings")
-    public Result<List<RatingVO>> getUserRatings(@AuthenticationPrincipal User currentUser) {
-        List<RatingVO> ratings = ratingService.getUserRatings(currentUser.getId());
-        return Result.success("查询成功", ratings);
+    public ApiResponse<List<RatingVO>> getUserRatings(@AuthenticationPrincipal User currentUser) {
+        return ApiResponse.success("查询成功", ratingService.getUserRatings(currentUser.getId()));
     }
 
+    @Operation(summary = "查看本人收藏")
     @GetMapping("/favorites")
-    public Result<List<FavoriteVO>> getUserFavorites(@AuthenticationPrincipal User currentUser) {
-        List<FavoriteVO> favorites = favoriteService.getUserFavorites(currentUser.getId());
-        return Result.success("查询成功", favorites);
+    public ApiResponse<List<FavoriteVO>> getUserFavorites(@AuthenticationPrincipal User currentUser) {
+        return ApiResponse.success("查询成功", favoriteService.getUserFavorites(currentUser.getId()));
     }
 }

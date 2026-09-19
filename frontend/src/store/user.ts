@@ -24,7 +24,7 @@ export const useUserStore = defineStore('user', () => {
 
   async function register(user: string, password: string, prefs: string) {
     const res: any = await registerApi(user, password, prefs)
-    if (res.code === 200) {
+    if (res.code === 201) {
       return true
     }
     throw new Error(res.message)

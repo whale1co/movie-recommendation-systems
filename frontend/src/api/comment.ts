@@ -17,5 +17,5 @@ export function getTotalLikes() {
 }
 
 export function getMyComments() {
-  return request.get('/comments/my-comments')
+  return request.get('/comments/mine')
 }

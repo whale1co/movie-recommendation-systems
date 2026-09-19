@@ -21,5 +21,5 @@ export function getRecommendations() {
 }
 
 export function getMovieList(page: number = 1, size: number = 20, genre?: string) {
-  return request.get('/movies/list', { params: { page, size, genre } })
+  return request.get('/movies', { params: { page, size, genre } })
 }

@@ -25,7 +25,7 @@
           <el-input
             v-model="form.password"
             type="password"
-            placeholder="不少于6位"
+            placeholder="至少8位，包含字母和数字"
             prefix-icon="Lock"
             show-password
             size="large"
@@ -117,7 +117,8 @@ const rules: FormRules = {
   ],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码不少于6位', trigger: 'blur' }
+    { min: 8, max: 72, message: '密码长度为8到72位', trigger: 'blur' },
+    { pattern: /^(?=.*[A-Za-z])(?=.*\d).+$/, message: '密码必须同时包含字母和数字', trigger: 'blur' }
   ],
   confirmPassword: [
     { required: true, message: '请确认密码', trigger: 'blur' },

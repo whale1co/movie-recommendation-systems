@@ -13,5 +13,5 @@ export function deleteRating(id: number) {
 }
 
 export function getUserRatings() {
-  return request.get('/user/ratings')
+  return request.get('/users/me/ratings')
 }

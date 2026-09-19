@@ -27,7 +27,17 @@ mybatis-plus:
 movie:
   poster-dir: ${MOVIE_POSTER_DIR:./posters}
 
+app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
 jwt:
   # The application must receive JWT_SECRET from the runtime environment.
   secret: ${JWT_SECRET}
-  expiration-ms: ${JWT_EXPIRATION_MS:604800000}
+  expiration-ms: ${JWT_EXPIRATION_MS:900000}

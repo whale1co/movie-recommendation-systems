@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.movierec.dto.FavoriteVO;
 import com.movierec.entity.Favorite;
 import com.movierec.entity.Movie;
+import com.movierec.exception.ConflictException;
+import com.movierec.exception.ResourceNotFoundException;
 import com.movierec.mapper.FavoriteMapper;
 import com.movierec.mapper.MovieMapper;
 import com.movierec.service.FavoriteService;
@@ -25,10 +27,13 @@ public class FavoriteServiceImpl implements FavoriteService {
 
     @Override
     public Favorite addFavorite(Long userId, Long movieId) {
+        if (movieMapper.selectById(movieId) == null) {
+            throw new ResourceNotFoundException("电影不存在");
+        }
         LambdaQueryWrapper<Favorite> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Favorite::getUserId, userId).eq(Favorite::getMovieId, movieId);
         if (favoriteMapper.selectOne(wrapper) != null) {
-            throw new RuntimeException("已收藏");
+            throw new ConflictException("已收藏");
         }
 
         Favorite favorite = new Favorite();
