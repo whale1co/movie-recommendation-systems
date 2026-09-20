@@ -1,1 +1,1 @@
-Conflict demo resolution: prefer the source branch wording.
+Conflict demo resolution: both branch variants were reviewed and replaced with this agreed wording.
