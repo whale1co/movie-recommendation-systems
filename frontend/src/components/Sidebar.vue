@@ -33,6 +33,11 @@
         <span>为你推荐</span>
       </el-menu-item>
 
+      <el-menu-item index='/ai-advisor' v-if='userStore.token'>
+        <el-icon><MagicStick /></el-icon>
+        <span>AI 选片顾问</span>
+      </el-menu-item>
+
       <el-menu-item index="/search-movies">
         <el-icon><Search /></el-icon>
         <span>搜索电影</span>
@@ -71,7 +76,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Film, Star, User, Setting, SwitchButton, Search, Tools } from '@element-plus/icons-vue'
+import { Film, MagicStick, Star, User, Setting, SwitchButton, Search, Tools } from '@element-plus/icons-vue'
 import { useUserStore } from '../store/user'
 
 const route = useRoute()
@@ -82,9 +87,10 @@ const activeMenu = computed(() => {
   return route.path
 })
 
-function handleSelect(index: string) {
+async function handleSelect(index: string) {
   if (index === 'logout') {
-    userStore.logout()
+    await userStore.logout()
+    router.push('/login')
     return
   }
   router.push(index)
@@ -207,5 +213,38 @@ function handleSelect(index: string) {
   font-size: 11px;
   color: #c0c4cc;
   border-top: 1px solid #eef2f7;
+}
+
+@media (max-width: 768px) {
+  .sidebar-logo {
+    justify-content: center;
+    padding: 18px 8px 14px;
+  }
+
+  .logo-text,
+  .user-card-info,
+  .sidebar-menu .el-menu-item span,
+  .sidebar-footer {
+    display: none;
+  }
+
+  .user-card {
+    justify-content: center;
+    margin: 0 8px 14px;
+    padding: 8px;
+  }
+
+  .sidebar-menu {
+    padding: 0 6px;
+  }
+
+  .sidebar-menu .el-menu-item {
+    justify-content: center;
+    padding: 0 !important;
+  }
+
+  .sidebar-menu .el-menu-item .el-icon {
+    margin: 0;
+  }
 }
 </style>

@@ -66,9 +66,7 @@ const userStore = useUserStore()
 const searchQuery = ref('')
 
 onMounted(() => {
-  if (userStore.token && !userStore.username) {
-    userStore.fetchUserInfo()
-  }
+  userStore.initialize()
 })
 
 function handleSearch() {
@@ -78,13 +76,14 @@ function handleSearch() {
   }
 }
 
-function handleCommand(command: string) {
+async function handleCommand(command: string) {
   if (command === 'profile') {
     router.push('/profile')
   } else if (command === 'settings') {
     router.push('/settings')
   } else if (command === 'logout') {
-    userStore.logout()
+    await userStore.logout()
+    router.push('/login')
   }
 }
 </script>
@@ -244,5 +243,31 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #98a2b3;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    width: 68px !important;
+  }
+
+  .main-wrapper {
+    margin-left: 68px;
+  }
+
+  .top-bar {
+    padding: 0 12px;
+  }
+
+  .top-bar-left {
+    max-width: none;
+  }
+
+  .user-name {
+    display: none;
+  }
+
+  .content-area {
+    padding: 16px 12px;
+  }
 }
 </style>

@@ -2,6 +2,7 @@ package com.movierec.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.movierec.common.ApiResponse;
+import com.movierec.service.SecurityAuditService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -11,6 +12,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -25,13 +27,17 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final ObjectMapper objectMapper;
+    private final SecurityAuditService auditService;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, ObjectMapper objectMapper) {
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, ObjectMapper objectMapper,
+                          SecurityAuditService auditService) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.objectMapper = objectMapper;
+        this.auditService = auditService;
     }
 
     @Bean
@@ -47,9 +53,9 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint((request, response, ex) ->
-                                writeError(response, HttpStatus.UNAUTHORIZED, "请先登录"))
+                                writeDenied(request, response, HttpStatus.UNAUTHORIZED, "请先登录"))
                         .accessDeniedHandler((request, response, ex) ->
-                                writeError(response, HttpStatus.FORBIDDEN, "无权访问该资源")))
+                                writeDenied(request, response, HttpStatus.FORBIDDEN, "无权访问该资源")))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/health", "/api/v1/auth/**",
                                 "/api/posters/**", "/swagger-ui.html", "/swagger-ui/**",
@@ -95,5 +101,15 @@ public class SecurityConfig {
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding("UTF-8");
         objectMapper.writeValue(response.getWriter(), ApiResponse.error(status, message));
+    }
+
+    private void writeDenied(jakarta.servlet.http.HttpServletRequest request,
+                             jakarta.servlet.http.HttpServletResponse response,
+                             HttpStatus status, String message) throws java.io.IOException {
+        Long userId = request.getUserPrincipal() instanceof org.springframework.security.core.Authentication auth
+                && auth.getPrincipal() instanceof com.movierec.entity.User user ? user.getId() : null;
+        auditService.record(status == HttpStatus.UNAUTHORIZED ? "AUTHENTICATION_REQUIRED" : "ACCESS_DENIED",
+                "DENIED", userId, request.getRequestURI(), null);
+        writeError(response, status, message);
     }
 }

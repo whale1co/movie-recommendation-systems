@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 
 import java.security.Key;
 import java.util.Date;
+import java.util.Locale;
 
 @Component
 public class JwtUtil {
@@ -18,14 +19,23 @@ public class JwtUtil {
 
     public JwtUtil(@Value("${jwt.secret}") String secret,
                    @Value("${jwt.expiration-ms:604800000}") long expiration) {
-        if (secret == null || secret.getBytes(java.nio.charset.StandardCharsets.UTF_8).length < 32) {
-            throw new IllegalStateException("JWT_SECRET must contain at least 32 UTF-8 bytes");
+        if (isWeakSecret(secret)) {
+            throw new IllegalStateException(
+                    "JWT_SECRET must contain at least 32 UTF-8 bytes and must not be a placeholder or low-entropy value");
         }
         this.key = Keys.hmacShaKeyFor(secret.getBytes(java.nio.charset.StandardCharsets.UTF_8));
         this.expiration = expiration;
     }
 
-    public String generateToken(Long userId, String username) {
+    private boolean isWeakSecret(String secret) {
+        if (secret == null || secret.getBytes(java.nio.charset.StandardCharsets.UTF_8).length < 32) return true;
+        String normalized = secret.toLowerCase(Locale.ROOT);
+        if (normalized.contains("change-me") || normalized.contains("replace-with")
+                || normalized.contains("your-secret") || normalized.contains("jwt-secret")) return true;
+        return secret.chars().distinct().count() < 10;
+    }
+
+    public String generateAccessToken(Long userId, String username, String sessionId) {
         Date now = new Date();
         Date expire = new Date(now.getTime() + expiration);
 
@@ -33,10 +43,15 @@ public class JwtUtil {
                 .setSubject(String.valueOf(userId))
                 .claim("userId", userId)
                 .claim("username", username)
+                .claim("sessionId", sessionId)
                 .setIssuedAt(now)
                 .setExpiration(expire)
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
+    }
+
+    public long getExpirationSeconds() {
+        return expiration / 1000;
     }
 
     public Long getUserIdFromToken(String token) {
@@ -47,6 +62,10 @@ public class JwtUtil {
     public String getUsernameFromToken(String token) {
         Claims claims = parseToken(token);
         return claims.get("username", String.class);
+    }
+
+    public String getSessionIdFromToken(String token) {
+        return parseToken(token).get("sessionId", String.class);
     }
 
     public boolean validateToken(String token) {

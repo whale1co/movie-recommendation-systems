@@ -13,18 +13,16 @@ import com.movierec.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @Tag(name = "当前用户")
 @RestController
 @RequestMapping("/api/v1/users/me")
+@PreAuthorize("isAuthenticated()")
 public class UserController {
     private final UserService userService;
     private final RatingService ratingService;
@@ -40,20 +38,22 @@ public class UserController {
     @GetMapping
     public ApiResponse<UserProfileVO> getProfile(@AuthenticationPrincipal User currentUser) {
         UserProfileVO profile = userService.getProfile(currentUser.getId());
-        if (profile == null) {
-            throw new ResourceNotFoundException("用户不存在");
-        }
+        if (profile == null) throw new ResourceNotFoundException("用户不存在");
         return ApiResponse.success("查询成功", profile);
     }
 
     @Operation(summary = "修改本人资料")
     @PatchMapping
-    public ApiResponse<UserProfileVO> updateProfile(
-            @AuthenticationPrincipal User currentUser,
-            @Valid @RequestBody UpdateProfileRequest request) {
-        UserProfileVO profile = userService.updateProfile(currentUser.getId(), request.oldPassword(),
-                request.newPassword(), request.preferences());
-        return ApiResponse.success("修改成功", profile);
+    public ApiResponse<UserProfileVO> updateProfile(@AuthenticationPrincipal User currentUser,
+                                                      @Valid @RequestBody UpdateProfileRequest request) {
+        return ApiResponse.success("修改成功", userService.updateProfile(currentUser.getId(), request.oldPassword(), request.newPassword(), request.preferences()));
+    }
+
+    @Operation(summary = "注销本人账户")
+    @DeleteMapping
+    public ApiResponse<Void> deleteProfile(@AuthenticationPrincipal User currentUser) {
+        userService.deleteSelf(currentUser.getId());
+        return ApiResponse.success("账户已注销", null);
     }
 
     @Operation(summary = "查看本人评分")

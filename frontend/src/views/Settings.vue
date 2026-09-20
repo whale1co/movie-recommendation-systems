@@ -148,7 +148,7 @@ async function handleChangePassword() {
       newPassword: pwdForm.newPassword
     })
     ElMessage.success('密码修改成功，请重新登录')
-    userStore.logout()
+    await userStore.logout()
   } catch (e: any) {
     ElMessage.error(e.message || '修改失败')
   } finally {

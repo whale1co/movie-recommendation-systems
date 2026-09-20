@@ -20,6 +20,8 @@ public class User {
 
     private String role;
 
+    private String status;
+
     private String preferences;
 
     private LocalDateTime createTime;

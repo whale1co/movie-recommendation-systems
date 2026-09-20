@@ -2,6 +2,7 @@ package com.movierec.config;
 
 import com.movierec.common.RequestIdFilter;
 import com.movierec.controller.HealthController;
+import com.movierec.service.SecurityAuditService;
 import jakarta.servlet.FilterChain;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -12,6 +13,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.Mockito.doAnswer;
@@ -25,11 +27,19 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import({SecurityConfig.class, RequestIdFilter.class})
 @ContextConfiguration(classes = {HealthController.class, SecurityConfig.class, RequestIdFilter.class})
 class SecurityConfigTest {
+    @org.junit.jupiter.api.Test
+    void methodSecurityIsEnabled() {
+        org.junit.jupiter.api.Assertions.assertTrue(SecurityConfig.class.isAnnotationPresent(EnableMethodSecurity.class));
+    }
+
     @Autowired
     private MockMvc mockMvc;
 
     @MockBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    @MockBean
+    private SecurityAuditService securityAuditService;
 
     @BeforeEach
     void allowRequestsThroughJwtFilter() throws Exception {
