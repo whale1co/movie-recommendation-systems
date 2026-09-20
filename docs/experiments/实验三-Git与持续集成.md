@@ -39,7 +39,7 @@ AI 可以辅助检查代码和整理修改建议，但不能冒充人工批准�
 | Backend test and package | Java 17、MySQL 8、`mvn test`、`mvn -DskipTests package` | 修复编译、测试或迁移问题 |
 | Frontend test and build | Node 20、`npm ci`、`npm audit`、Vitest、Vue 类型检查和 Vite 构建 | 修复依赖、测试、类型或构建问题 |
 | Secret scan | Gitleaks 扫描完整 Git 历史 | 撤销并轮换真实密钥，再清理历史 |
-| Dependency review | PR 新增依赖的高危漏洞审查 | 升级、替换或移除依赖 |
+| Dependency review | Trivy 扫描 Maven/npm 依赖中的 HIGH/CRITICAL 漏洞 | 升级、替换或移除依赖 |
 
 后端固定使用 `LLM_PROVIDER=fake`，CI 不访问真实模型，也不需要 `LLM_API_KEY`。数据库密码和 JWT Secret 是工作流内仅供隔离 CI 服务使用的非生产值，不使用本地或生产凭据。
 
@@ -86,7 +86,7 @@ Secret scan
 Dependency review
 ```
 
-状态检查通常要在工作流首次运行后才出现在选择列表中。若私有仓库套餐不支持 GitHub Dependency Review，应记录平台限制，并至少保留 `npm audit`、Gitleaks 和后端/前端门禁；不能把未运行的检查写成已完成证据。
+状态检查通常要在工作流首次运行后才出现在选择列表中。本仓库为私有仓库，未启用 GitHub Advanced Security，官方 Dependency Review Action 不可用，因此改用不依赖该付费能力的 Trivy 文件系统依赖扫描；前端 job 仍额外执行 `npm audit`。
 
 ## 6. 无害冲突演示
 
