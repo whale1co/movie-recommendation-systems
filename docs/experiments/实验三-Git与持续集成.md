@@ -104,6 +104,18 @@ Dependency review
 
 不得手写一段冲突标记后声称解决过冲突。课程证据应包含真实分支、两个父提交和冲突解决提交。
 
+本次实际记录：
+
+```text
+目标分支提交：ae5d794 docs: add target conflict wording
+来源分支提交：644a6ba docs: add source conflict wording
+解决提交：    6cb1018 docs: resolve harmless collaboration conflict
+解决提交父级：644a6ba + ae5d794
+冲突文件：    docs/evidence/conflict-demo.txt
+```
+
+两个 `demo/*` 分支均已推送到远程，解决提交保留了双父关系。
+
 ## 7. 证据清单
 
 以下证据必须来自真实 GitHub 页面，并在内容脱敏后截图：
@@ -117,3 +129,12 @@ Dependency review
 - 无害冲突发生、解决后的提交图和最终文件。
 
 本地文件、模板或 AI 建议不能替代 PR、人工 Review、Actions 运行和平台分支保护证据。
+
+## 8. 本次远程结果
+
+- PR：`https://github.com/whale1co/movie-recommendation-systems/pull/1`。
+- PR CI：Actions 运行 `35513533919`，四项检查全部 success。
+- Push CI：Actions 运行 `35513531878`，三项适用检查全部 success。
+- 人工 Review：待完成。仓库目前只有 PR 作者一名协作者，作者不能代替独立 Reviewer。
+- 分支保护：GitHub 对当前私有仓库返回 403，要求升级 Pro 或改为公开仓库；未擅自改变仓库可见性。
+- PR 状态：保持打开，未绕过 Review 或保护条件合并。
