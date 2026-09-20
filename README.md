@@ -24,11 +24,28 @@ Flyway 会在应用启动时执行 `backend/src/main/resources/db/migration` 中
 - 开发环境默认只允许 `http://localhost:5173` 和 `http://127.0.0.1:5173` 跨域访问。生产环境必须显式设置 `CORS_ALLOWED_ORIGINS`，不接受 `*`。
 - 可通过 `--spring.profiles.active=dev|test|prod` 选择环境配置。生产配置只包含环境变量占位符，不包含真实密钥。
 
+## AI 选片顾问
+
+- `POST /api/v1/ai/advisor` 接收问题字段，要求登录且拥有 `ai:chat` 权限。
+- 默认 `LLM_PROVIDER=fake`，无需网络即可验证完整 RAG、安全检查、引用回查和降级链路。
+- 连接 OpenAI 兼容 API 或 Ollama 时设置 `LLM_PROVIDER=openai-compatible`、`LLM_BASE_URL`、`LLM_MODEL`，需要鉴权的服务另设 `LLM_API_KEY`。
+- 后端先解析片长、类型、评分和年份约束，再从本地电影库做文本与 User-CF 融合检索；模型只能解释候选电影，响应中的 `movieId` 均经后端候选集回查。
+- 模型不可用、超时、非法 JSON 或返回虚构 ID 时，接口仍返回本地排序结果，并将 `degraded` 设为 `true`。审计记录不包含原始问题、提示词、Token 或 API Key。
+
 ## 重要说明
 
 - `backend/douban_movies.csv`、`backend/douban_users.csv`、`backend/posters/` 属于本地数据或生成物，默认不会提交。
 - 生产环境必须通过环境变量提供数据库密码和 JWT 密钥。
 - 当前项目已使用 Spring Boot 3 和 Java 17，并已完成 DTO、Bean Validation、REST v1、统一异常、OpenAPI 和 CORS 接口底座。
+
+## Git 协作与 CI
+
+- 从 `develop` 创建 `feature/*` 或 `fix/*` 分支，通过 Pull Request 合并；`main` 只接收通过验收的版本。
+- PR 必须通过后端测试/打包、前端依赖审计/测试/构建、Gitleaks Secret 扫描和依赖变更审查。
+- 本地提交前运行：`cd backend && mvn test`，以及 `cd frontend && npm ci && npm test && npm run build`。
+- 仓库维护者应为 `main` 和 `develop` 启用分支保护，要求 PR、至少 1 次人工批准、全部对话已解决和所需 CI 检查通过。
+- PR、Issue、Review 和截图中不得包含密码、密钥、Token、Cookie、真实用户数据或未脱敏日志。
+- 详细流程与验收证据见 `docs/experiments/实验三-Git与持续集成.md`。
 
 
 ## 基线与敏感数据
