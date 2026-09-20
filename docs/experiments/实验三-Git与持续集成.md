@@ -61,6 +61,10 @@ Vite production build passed
 
 npm audit --audit-level=high
 found 0 vulnerabilities
+
+Trivy dependency scan
+mysql-connector-j upgraded from 8.0.33 to BOM-managed 8.3.0
+CVE-2023-22102 resolved
 ```
 
 Windows 本机的后端 `package` 步骤因正在运行的后端进程占用 `target/movie-rec-backend-1.0.0.jar` 而无法重命名旧 JAR。测试和编译均已通过；GitHub Actions 使用全新 Ubuntu Runner，不存在该文件占用。需要本机复验时，先安全停止旧后端进程，再运行打包命令。
