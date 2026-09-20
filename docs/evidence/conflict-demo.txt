@@ -1,0 +1,1 @@
+Conflict demo resolution: prefer the source branch wording.
