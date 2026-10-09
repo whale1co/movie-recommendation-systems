@@ -1,6 +1,6 @@
 # 智能电影推荐系统
 
-## 当前基线
+## 项目概览
 
 - Backend: Java 17、Spring Boot 3.3、MyBatis-Plus、Spring Security、Flyway、MySQL
 - Frontend: Vue 3、TypeScript、Vite、Pinia、Axios、Element Plus
@@ -34,7 +34,7 @@ Flyway 会在应用启动时执行 `backend/src/main/resources/db/migration` 中
 
 ## 重要说明
 
-- `backend/douban_movies.csv`、`backend/douban_users.csv`、`backend/posters/` 属于本地数据或生成物，默认不会提交。
+- `backend/douban_movies.csv` 和 `backend/douban_users.csv` 可作为电影与用户数据导入文件使用，`backend/posters/` 可用于存放电影海报资源；是否随项目部署或提交，按照实际运行环境和交付要求安排。
 - 生产环境必须通过环境变量提供数据库密码和 JWT 密钥。
 - 当前项目已使用 Spring Boot 3 和 Java 17，并已完成 DTO、Bean Validation、REST v1、统一异常、OpenAPI 和 CORS 接口底座。
 
@@ -45,11 +45,8 @@ Flyway 会在应用启动时执行 `backend/src/main/resources/db/migration` 中
 - 本地提交前运行：`cd backend && mvn test`，以及 `cd frontend && npm ci && npm test && npm run build`。
 - 仓库维护者应为 `main` 和 `develop` 启用分支保护，要求 PR、至少 1 次人工批准、全部对话已解决和所需 CI 检查通过。
 - PR、Issue、Review 和截图中不得包含密码、密钥、Token、Cookie、真实用户数据或未脱敏日志。
-- 详细流程与验收证据见 `docs/experiments/实验三-Git与持续集成.md`。
 
+## 配置与数据说明
 
-## 基线与敏感数据
-
-- 当前基线记录见 `docs/baseline/2026-09-18-baseline.md`。
-- 数据库导出、原始 CSV、海报和本地备份默认不进入 Git；需要共享时只提交脱敏的小样本或恢复说明。
+- 数据库连接、JWT、跨域和 AI 服务参数通过环境变量配置，示例见 `.env.example`。
 - 不要把密码、JWT Secret、LLM API Key、完整 Token 或包含用户隐私的日志提交到仓库、Issue、PR 或截图中。
