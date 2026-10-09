@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
+import { useUserStore } from '../store/user'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -19,6 +20,7 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/movie/:id',
+    alias: '/movies/:id',
     name: 'MovieDetail',
     component: () => import('../views/MovieDetail.vue')
   },
@@ -39,6 +41,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/ai-advisor',
+    name: 'AiAdvisor',
+    component: () => import('../views/AiAdvisor.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/favorites',
     name: 'Favorites',
     component: () => import('../views/Profile.vue'),
@@ -56,12 +64,6 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../views/Settings.vue'),
     meta: { requiresAuth: true }
   },
-  {
-    path: '/admin',
-    name: 'Admin',
-    component: () => import('../views/Admin.vue'),
-    meta: { requiresAuth: true, requiresAdmin: true }
-  }
 ]
 
 const router = createRouter({
@@ -69,14 +71,15 @@ const router = createRouter({
   routes
 })
 
-router.beforeEach((to, _from, next) => {
-  const token = localStorage.getItem('token')
+router.beforeEach(async (to, _from, next) => {
+  const userStore = useUserStore()
+  await userStore.initialize()
 
-  if (to.meta.requiresAuth && !token) {
+  if (to.meta.requiresAuth && !userStore.token) {
     next({ name: 'Login', query: { redirect: to.fullPath } })
-  } else if (to.meta.requiresAdmin && localStorage.getItem('role') !== 'ADMIN') {
+  } else if (to.meta.requiresAdmin && userStore.role !== 'ADMIN') {
     next({ name: 'Home' })
-  } else if ((to.name === 'Login' || to.name === 'Register') && token) {
+  } else if ((to.name === 'Login' || to.name === 'Register') && userStore.token) {
     next({ name: 'Home' })
   } else {
     next()

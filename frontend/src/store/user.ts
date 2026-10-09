@@ -1,21 +1,22 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { loginApi, registerApi } from '../api/auth'
+import { loginApi, logoutApi, registerApi } from '../api/auth'
 import { getUserInfo, updateProfile } from '../api/user'
-import router from '../router'
+import { accessToken, setAccessToken } from '../utils/authState'
 
 export const useUserStore = defineStore('user', () => {
-  const token = ref<string>(localStorage.getItem('token') || '')
+  const token = accessToken
+  const userId = ref<number | null>(null)
   const username = ref<string>('')
-  const role = ref<string>(localStorage.getItem('role') || '')
+  const role = ref<string>('')
   const preferences = ref<string>('')
   const createTime = ref<string>('')
+  let initialized = false
 
   async function login(user: string, password: string) {
     const res: any = await loginApi(user, password)
     if (res.code === 200) {
-      token.value = res.data.token
-      localStorage.setItem('token', res.data.token)
+      setAccessToken(res.data.accessToken)
       await fetchUserInfo()
       return true
     }
@@ -24,35 +25,55 @@ export const useUserStore = defineStore('user', () => {
 
   async function register(user: string, password: string, prefs: string) {
     const res: any = await registerApi(user, password, prefs)
-    if (res.code === 200) {
+    if (res.code === 201) {
       return true
     }
     throw new Error(res.message)
   }
 
-  function logout() {
-    token.value = ''
+  async function logout() {
+    try {
+      await logoutApi()
+    } finally {
+      clearSession()
+    }
+  }
+
+  function clearSession() {
+    if (userId.value) sessionStorage.removeItem('movie-rec:ai-advisor:' + userId.value)
+    setAccessToken('')
+    userId.value = null
     username.value = ''
     role.value = ''
     preferences.value = ''
     createTime.value = ''
-    localStorage.removeItem('token')
-    localStorage.removeItem('role')
-    router.push('/login')
   }
 
   async function fetchUserInfo() {
     try {
       const res: any = await getUserInfo()
       if (res.code === 200) {
+        userId.value = res.data.id ?? null
         username.value = res.data.username
         role.value = res.data.role || 'USER'
-        localStorage.setItem('role', role.value)
         preferences.value = res.data.preferences || ''
         createTime.value = res.data.createTime || ''
       }
     } catch {
-      logout()
+      clearSession()
+    }
+  }
+
+  async function initialize() {
+    if (initialized) return Boolean(token.value)
+    initialized = true
+    if (!token.value) return false
+    try {
+      await fetchUserInfo()
+      return Boolean(token.value)
+    } catch {
+      clearSession()
+      return false
     }
   }
 
@@ -69,6 +90,7 @@ export const useUserStore = defineStore('user', () => {
 
   return {
     token,
+    userId,
     username,
     role,
     preferences,
@@ -76,6 +98,7 @@ export const useUserStore = defineStore('user', () => {
     login,
     register,
     logout,
+    initialize,
     fetchUserInfo,
     updateUserProfile
   }

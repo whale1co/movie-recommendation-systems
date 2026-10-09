@@ -209,7 +209,7 @@ async function loadMovie() {
   loading.value = true
   try {
     const res: any = await getMovieDetail(id)
-    if (res.code === 200) {
+    if (res.code >= 200 && res.code < 300) {
       movie.value = res.data
       if (userStore.token) {
         await loadUserStatus()
@@ -271,7 +271,7 @@ async function handleAddComment() {
   commentSubmitting.value = true
   try {
     const res: any = await addComment(movie.value.id, commentContent.value.trim())
-    if (res.code === 200) {
+    if (res.code >= 200 && res.code < 300) {
       ElMessage.success('评论成功')
       commentContent.value = ''
       await loadComments()
@@ -314,7 +314,7 @@ async function handleRate(val: number) {
       ElMessage.success('评分已更新')
     } else {
       const res: any = await addRating(movie.value.id, val)
-      if (res.code === 200) {
+      if (res.code >= 200 && res.code < 300) {
         myRatingId.value = res.data?.ratingId || null
         ElMessage.success('评分成功')
       } else {
@@ -355,7 +355,7 @@ async function handleFavorite() {
       ElMessage.success('已取消收藏')
     } else {
       const res: any = await addFavorite(movie.value.id)
-      if (res.code === 200) {
+      if (res.code >= 200 && res.code < 300) {
         isFavorited.value = true
         ElMessage.success('收藏成功')
       } else {

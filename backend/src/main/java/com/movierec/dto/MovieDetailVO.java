@@ -33,4 +33,6 @@ public class MovieDetailVO {
     private BigDecimal avgRating;
 
     private Integer ratingCount;
+
+    private String status;
 }

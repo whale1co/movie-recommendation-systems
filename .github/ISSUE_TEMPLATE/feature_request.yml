@@ -1,0 +1,33 @@
+name: 功能建议
+description: 提议可验收的功能或工程改进
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 需要解决的问题
+      description: 描述用户、场景和当前限制。
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 建议方案
+      description: 说明范围、交互或接口变化。
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 验收标准
+      placeholder: |
+        - [ ] 可观察的结果一
+        - [ ] 可观察的结果二
+    validations:
+      required: true
+  - type: textarea
+    id: risks
+    attributes:
+      label: 风险与依赖
+      description: 包括兼容性、数据迁移、安全或外部服务依赖。

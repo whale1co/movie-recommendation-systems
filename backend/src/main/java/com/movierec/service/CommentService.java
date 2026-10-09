@@ -2,9 +2,9 @@ package com.movierec.service;
 
 import com.movierec.dto.CommentVO;
 import com.movierec.dto.MyCommentVO;
+import com.movierec.dto.response.LikeResponse;
 
 import java.util.List;
-import java.util.Map;
 
 public interface CommentService {
 
@@ -12,7 +12,7 @@ public interface CommentService {
 
     List<CommentVO> getCommentsByMovieId(Long movieId, Long currentUserId);
 
-    Map<String, Object> toggleLike(Long userId, Long commentId);
+    LikeResponse toggleLike(Long userId, Long commentId);
 
     int getTotalLikesByUserId(Long userId);
 

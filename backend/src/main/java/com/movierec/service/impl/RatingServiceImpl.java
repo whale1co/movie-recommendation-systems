@@ -4,6 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.movierec.dto.RatingVO;
 import com.movierec.entity.Movie;
 import com.movierec.entity.Rating;
+import com.movierec.exception.ConflictException;
+import com.movierec.exception.ForbiddenOperationException;
+import com.movierec.exception.ResourceNotFoundException;
 import com.movierec.mapper.MovieMapper;
 import com.movierec.mapper.RatingMapper;
 import com.movierec.service.RatingService;
@@ -27,10 +30,13 @@ public class RatingServiceImpl implements RatingService {
 
     @Override
     public Rating addRating(Long userId, Long movieId, Double score) {
+        if (movieMapper.selectById(movieId) == null) {
+            throw new ResourceNotFoundException("电影不存在");
+        }
         LambdaQueryWrapper<Rating> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Rating::getUserId, userId).eq(Rating::getMovieId, movieId);
         if (ratingMapper.selectOne(wrapper) != null) {
-            throw new RuntimeException("已评分，请使用修改接口");
+            throw new ConflictException("已评分，请使用修改接口");
         }
 
         Rating rating = new Rating();
@@ -47,10 +53,10 @@ public class RatingServiceImpl implements RatingService {
     public Rating updateRating(Long ratingId, Long userId, Double score) {
         Rating rating = ratingMapper.selectById(ratingId);
         if (rating == null) {
-            throw new RuntimeException("评分记录不存在");
+            throw new ResourceNotFoundException("评分记录不存在");
         }
         if (!rating.getUserId().equals(userId)) {
-            throw new RuntimeException("无权修改他人评分");
+            throw new ForbiddenOperationException("无权修改他人评分");
         }
 
         rating.setScore(score);
@@ -64,10 +70,10 @@ public class RatingServiceImpl implements RatingService {
     public void deleteRating(Long ratingId, Long userId) {
         Rating rating = ratingMapper.selectById(ratingId);
         if (rating == null) {
-            throw new RuntimeException("评分记录不存在");
+            throw new ResourceNotFoundException("评分记录不存在");
         }
         if (!rating.getUserId().equals(userId)) {
-            throw new RuntimeException("无权删除他人评分");
+            throw new ForbiddenOperationException("无权删除他人评分");
         }
 
         ratingMapper.deleteById(ratingId);

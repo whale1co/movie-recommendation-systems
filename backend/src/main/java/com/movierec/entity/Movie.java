@@ -40,5 +40,8 @@ public class Movie {
 
     private Integer ratingCount;
 
+    /** ACTIVE records are visible to end users; DELETED records remain for audit/recovery. */
+    private String status;
+
     private LocalDateTime createTime;
 }

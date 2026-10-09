@@ -9,5 +9,5 @@ export function removeFavorite(movieId: number) {
 }
 
 export function getUserFavorites() {
-  return request.get('/user/favorites')
+  return request.get('/users/me/favorites')
 }

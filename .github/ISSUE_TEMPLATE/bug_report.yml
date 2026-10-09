@@ -1,0 +1,47 @@
+name: Bug 报告
+description: 报告可复现的缺陷或回归
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: 问题描述
+      description: 说明实际结果及其影响。
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. 登录为...
+        2. 打开...
+        3. 执行...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期结果
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: 环境
+      placeholder: Windows 11 / Chrome 版本 / 分支或提交号
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 脱敏证据
+      description: 可附日志、请求 ID 或截图。不要提交密码、密钥、Token、Cookie 或个人数据。
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: 安全确认
+      options:
+        - label: 我已确认内容不包含密钥、Token、Cookie 或真实用户隐私。
+          required: true
