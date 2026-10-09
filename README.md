@@ -16,6 +16,15 @@
 
 Flyway 会在应用启动时执行 `backend/src/main/resources/db/migration` 中的版本迁移。已有数据库使用 `baseline-on-migrate` 建立基线；后续结构变更必须新增版本脚本，不要直接修改已执行的迁移。
 
+## 数据库与环境配置
+
+- 数据库连接和 Flyway 配置：`backend/src/main/resources/application.yml`
+- 开发、测试和生产环境配置：`backend/src/main/resources/application-dev.yml`、`backend/src/main/resources/application-test.yml`、`backend/src/main/resources/application-prod.yml`
+- 环境变量示例：`.env.example`，其中包含数据库连接、JWT、跨域和 AI 服务参数的占位配置；真实密码和密钥应通过运行环境注入。
+- 数据库结构迁移：`backend/src/main/resources/db/migration/` 下的 `V1__create_initial_schema.sql` 至 `V6__add_admin_tasks.sql`
+
+首次运行时创建 `movie_rec` 数据库，并根据 `.env.example` 设置数据库账号、密码和 `JWT_SECRET`。应用启动后会由 Flyway 按版本顺序执行数据库迁移脚本。
+
 ## REST API
 
 - 业务接口统一使用 `/api/v1` 前缀，静态海报继续使用 `/api/posters`。
