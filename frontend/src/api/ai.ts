@@ -51,3 +51,39 @@ export function askAiAdvisor(question: string, signal?: AbortSignal) {
     } as any
   )
 }
+
+export interface AiAdvisorHistorySummary {
+  id: number
+  question: string
+  answerPreview: string
+  recommendationCount: number
+  aiGenerated: boolean
+  degraded: boolean
+  createdAt: string
+}
+
+export interface AiAdvisorHistoryDetail {
+  id: number
+  question: string
+  result: AiAdvisorResult
+  createdAt: string
+}
+
+export interface PageResponse<T> {
+  records: T[]
+  total: number
+  current: number
+  size: number
+}
+
+export function getAiAdvisorHistory(page = 1, size = 20) {
+  return request.get<unknown, ApiResponse<PageResponse<AiAdvisorHistorySummary>>>('/ai/advisor/history', { params: { page, size } })
+}
+
+export function getAiAdvisorHistoryDetail(id: number) {
+  return request.get<unknown, ApiResponse<AiAdvisorHistoryDetail>>(`/ai/advisor/history/${id}`)
+}
+
+export function deleteAiAdvisorHistory(id: number) {
+  return request.delete<unknown, ApiResponse<null>>(`/ai/advisor/history/${id}`)
+}

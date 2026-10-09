@@ -5,6 +5,7 @@ import com.movierec.common.RequestIdFilter;
 import com.movierec.config.JwtAuthenticationFilter;
 import com.movierec.config.SecurityConfig;
 import com.movierec.service.SecurityAuditService;
+import com.movierec.service.AiAdvisorHistoryService;
 import jakarta.servlet.FilterChain;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,6 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AiAdvisorControllerSecurityTest {
     @Autowired MockMvc mockMvc;
     @MockBean AiAdvisorService advisorService;
+    @MockBean AiAdvisorHistoryService historyService;
     @MockBean JwtAuthenticationFilter jwtAuthenticationFilter;
     @MockBean SecurityAuditService securityAuditService;
 

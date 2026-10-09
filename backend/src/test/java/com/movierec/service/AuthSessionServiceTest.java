@@ -38,7 +38,7 @@ class AuthSessionServiceTest {
     @Test
     void storesOnlyRefreshTokenHash() {
         User user = activeUser();
-        when(jwtUtil.generateAccessToken(eq(7L), eq("alice"), any())).thenReturn("access");
+        when(jwtUtil.generateAccessToken(eq(7L), eq("alice"), eq((String)null), any())).thenReturn("access");
 
         AuthSessionService.AuthTokens tokens = service.create(user);
 
@@ -58,7 +58,7 @@ class AuthSessionServiceTest {
         when(tokenMapper.selectOne(any())).thenReturn(current);
         when(tokenMapper.revokeForRotation(eq(11L), any())).thenReturn(1);
         when(userMapper.selectById(7L)).thenReturn(activeUser());
-        when(jwtUtil.generateAccessToken(eq(7L), eq("alice"), any())).thenReturn("new-access");
+        when(jwtUtil.generateAccessToken(eq(7L), eq("alice"), eq((String)null), any())).thenReturn("new-access");
 
         AuthSessionService.AuthTokens tokens = service.rotate("old-refresh");
 

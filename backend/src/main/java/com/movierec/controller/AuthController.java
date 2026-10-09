@@ -19,9 +19,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.Cookie;
 import java.time.Duration;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -62,21 +62,23 @@ public class AuthController {
                                                                  HttpServletRequest httpRequest) {
         AuthSessionService.AuthTokens tokens = authenticationService.login(
                 request.username().trim(), request.password(), httpRequest.getRemoteAddr());
-        return tokenResponse("登录成功", tokens);
+        return tokenResponse("登录成功", tokens, isAdminClient(httpRequest));
     }
 
     @Operation(summary = "刷新访问令牌")
     @PostMapping("/refresh")
-    public ResponseEntity<ApiResponse<AuthTokenResponse>> refresh(
-            @CookieValue(name = "refresh_token", required = false) String refreshToken) {
-        return tokenResponse("刷新成功", authenticationService.refresh(refreshToken));
+    public ResponseEntity<ApiResponse<AuthTokenResponse>> refresh(HttpServletRequest httpRequest) {
+        boolean adminClient = isAdminClient(httpRequest);
+        String cookieName = refreshCookieName(adminClient);
+        String refreshToken = readCookie(httpRequest, cookieName);
+        return tokenResponse("刷新成功", authenticationService.refresh(refreshToken), adminClient);
     }
 
     @Operation(summary = "退出登录")
     @PostMapping("/logout")
-    public ResponseEntity<ApiResponse<Void>> logout(
-            @CookieValue(name = "refresh_token", required = false) String refreshToken,
-            Authentication authentication) {
+    public ResponseEntity<ApiResponse<Void>> logout(HttpServletRequest httpRequest, Authentication authentication) {
+        boolean adminClient = isAdminClient(httpRequest);
+        String refreshToken = readCookie(httpRequest, refreshCookieName(adminClient));
         if (authentication != null && authentication.getPrincipal() instanceof User user
                 && authentication.getDetails() instanceof String sessionId) {
             sessionService.revokeSession(sessionId, user.getId(), "user_logout");
@@ -84,13 +86,13 @@ public class AuthController {
             sessionService.revokeByRefreshToken(refreshToken, "user_logout");
         }
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, clearRefreshCookie().toString())
+                .header(HttpHeaders.SET_COOKIE, clearRefreshCookie(adminClient).toString())
                 .body(ApiResponse.success("退出成功", null));
     }
 
     private ResponseEntity<ApiResponse<AuthTokenResponse>> tokenResponse(
-            String message, AuthSessionService.AuthTokens tokens) {
-        ResponseCookie cookie = ResponseCookie.from("refresh_token", tokens.refreshToken())
+            String message, AuthSessionService.AuthTokens tokens, boolean adminClient) {
+        ResponseCookie cookie = ResponseCookie.from(refreshCookieName(adminClient), tokens.refreshToken())
                 .httpOnly(true).secure(refreshCookieSecure).sameSite("Strict")
                 .path("/api/v1/auth").maxAge(Duration.ofSeconds(refreshExpirationSeconds)).build();
         return ResponseEntity.ok()
@@ -99,8 +101,25 @@ public class AuthController {
                         new AuthTokenResponse(tokens.accessToken(), tokens.accessExpiresIn())));
     }
 
-    private ResponseCookie clearRefreshCookie() {
-        return ResponseCookie.from("refresh_token", "").httpOnly(true).secure(refreshCookieSecure)
+    private ResponseCookie clearRefreshCookie(boolean adminClient) {
+        return ResponseCookie.from(refreshCookieName(adminClient), "").httpOnly(true).secure(refreshCookieSecure)
                 .sameSite("Strict").path("/api/v1/auth").maxAge(Duration.ZERO).build();
+    }
+
+    private boolean isAdminClient(HttpServletRequest request) {
+        return "admin".equalsIgnoreCase(request.getHeader("X-Auth-Client"));
+    }
+
+    private String refreshCookieName(boolean adminClient) {
+        return adminClient ? "admin_refresh_token" : "refresh_token";
+    }
+
+    private String readCookie(HttpServletRequest request, String name) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null) return null;
+        for (Cookie cookie : cookies) {
+            if (name.equals(cookie.getName())) return cookie.getValue();
+        }
+        return null;
     }
 }

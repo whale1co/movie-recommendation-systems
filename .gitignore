@@ -12,6 +12,9 @@ backend/target/
 # Frontend
 frontend/node_modules/
 frontend/dist/
+admin-frontend/node_modules/
+admin-frontend/dist/
+backend/start-dev.ps1
 
 # IDE and OS files
 .idea/

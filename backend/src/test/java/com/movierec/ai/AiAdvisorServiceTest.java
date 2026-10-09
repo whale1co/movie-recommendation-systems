@@ -13,6 +13,7 @@ import com.movierec.ai.service.LocalIntentParser;
 import com.movierec.dto.response.AiAdvisorResponse;
 import com.movierec.entity.Movie;
 import com.movierec.service.AiUsageLimitService;
+import com.movierec.service.AiAdvisorHistoryService;
 import com.movierec.service.SecurityAuditService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,12 +42,13 @@ class AiAdvisorServiceTest {
     @Mock HybridMovieRetriever retriever;
     @Mock LlmClient llmClient;
     @Mock SecurityAuditService auditService;
+    @Mock AiAdvisorHistoryService historyService;
     private AiAdvisorService service;
 
     @BeforeEach
     void setUp() {
         service = new AiAdvisorService(usageLimitService, inputGuard, localIntentParser,
-                retriever, llmClient, auditService);
+                retriever, llmClient, auditService, historyService);
         when(llmClient.providerName()).thenReturn("fake");
     }
 

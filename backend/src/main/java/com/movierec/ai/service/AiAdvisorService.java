@@ -10,6 +10,7 @@ import com.movierec.dto.response.AiAdvisorResponse;
 import com.movierec.dto.response.AiMovieRecommendation;
 import com.movierec.entity.Movie;
 import com.movierec.service.AiUsageLimitService;
+import com.movierec.service.AiAdvisorHistoryService;
 import com.movierec.service.SecurityAuditService;
 import org.springframework.stereotype.Service;
 
@@ -29,16 +30,19 @@ public class AiAdvisorService {
     private final HybridMovieRetriever retriever;
     private final LlmClient llmClient;
     private final SecurityAuditService auditService;
+    private final AiAdvisorHistoryService historyService;
 
     public AiAdvisorService(AiUsageLimitService usageLimitService, AiInputGuard inputGuard,
                             LocalIntentParser localIntentParser, HybridMovieRetriever retriever,
-                            LlmClient llmClient, SecurityAuditService auditService) {
+                            LlmClient llmClient, SecurityAuditService auditService,
+                            AiAdvisorHistoryService historyService) {
         this.usageLimitService = usageLimitService;
         this.inputGuard = inputGuard;
         this.localIntentParser = localIntentParser;
         this.retriever = retriever;
         this.llmClient = llmClient;
         this.auditService = auditService;
+        this.historyService = historyService;
     }
 
     public AiAdvisorResponse advise(Long userId, String rawQuestion) {
@@ -60,8 +64,10 @@ public class AiAdvisorService {
         List<RetrievedMovie> candidates = retriever.retrieve(userId, question, intent);
         if (candidates.isEmpty()) {
             audit(userId, "NO_CANDIDATES", startedAt, 0, 0);
-            return new AiAdvisorResponse("本地片库中没有找到满足这些条件的电影，请尝试放宽类型、片长或评分要求。",
+            AiAdvisorResponse response = new AiAdvisorResponse("本地片库中没有找到满足这些条件的电影，请尝试放宽类型、片长或评分要求。",
                     intent, List.of(), false, degraded, llmClient.providerName());
+            historyService.saveQuietly(userId, question, response);
+            return response;
         }
 
         LlmRecommendationResult generated = null;
@@ -87,7 +93,9 @@ public class AiAdvisorService {
         if (answer.isBlank()) answer = "已根据本地片库为你筛选以下电影。";
         audit(userId, degraded ? "DEGRADED" : "SUCCESS", startedAt,
                 candidates.size(), recommendations.size(), degradationReason);
-        return new AiAdvisorResponse(answer, intent, recommendations, aiGenerated, degraded, llmClient.providerName());
+        AiAdvisorResponse response = new AiAdvisorResponse(answer, intent, recommendations, aiGenerated, degraded, llmClient.providerName());
+        historyService.saveQuietly(userId, question, response);
+        return response;
     }
 
     private List<AiMovieRecommendation> validateAndMap(LlmRecommendationResult result,

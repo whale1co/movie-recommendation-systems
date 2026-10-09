@@ -96,9 +96,18 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public PageResponse<UserProfileVO> listAdminUsers(long current, long size) {
+        return listAdminUsers(current, size, null, null, null);
+    }
+
+    @Override
+    public PageResponse<UserProfileVO> listAdminUsers(long current, long size, String keyword, String status, String role) {
         Page<User> page = new Page<>(current, size);
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
-        wrapper.ne(User::getStatus, DELETED).orderByDesc(User::getCreateTime);
+        wrapper.ne(User::getStatus, DELETED)
+                .and(keyword != null && !keyword.isBlank(), w -> w.like(User::getUsername, keyword.trim()).or().like(User::getId, keyword.trim()))
+                .eq(status != null && !status.isBlank(), User::getStatus, status)
+                .eq(role != null && !role.isBlank(), User::getRole, role)
+                .orderByDesc(User::getCreateTime);
         Page<User> result = userMapper.selectPage(page, wrapper);
         List<UserProfileVO> records = result.getRecords().stream().map(this::toProfileVO).toList();
         return new PageResponse<>(records, result.getTotal(), result.getCurrent(), result.getSize());

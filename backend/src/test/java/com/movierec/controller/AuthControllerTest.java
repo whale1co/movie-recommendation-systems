@@ -110,6 +110,21 @@ class AuthControllerTest {
     }
 
     @Test
+    void adminLoginUsesAnIndependentRefreshCookie() throws Exception {
+        when(authenticationService.login(anyString(), anyString(), anyString()))
+                .thenReturn(new AuthSessionService.AuthTokens("admin-access", "admin-refresh", 900));
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .header("X-Auth-Client", "admin")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new LoginBody("admin", "Password1"))))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.allOf(
+                        org.hamcrest.Matchers.containsString("admin_refresh_token=admin-refresh"),
+                        org.hamcrest.Matchers.containsString("HttpOnly"))));
+    }
+
+    @Test
     void refreshRotatesCookie() throws Exception {
         when(authenticationService.refresh("old-refresh"))
                 .thenReturn(new AuthSessionService.AuthTokens("new-access", "new-refresh", 900));
@@ -120,6 +135,21 @@ class AuthControllerTest {
                 .andExpect(header().string("Set-Cookie",
                         org.hamcrest.Matchers.containsString("refresh_token=new-refresh")))
                 .andExpect(jsonPath("$.data.accessToken").value("new-access"));
+    }
+
+    @Test
+    void adminRefreshReadsAndRotatesOnlyItsOwnCookie() throws Exception {
+        when(authenticationService.refresh("admin-old"))
+                .thenReturn(new AuthSessionService.AuthTokens("admin-new-access", "admin-new", 900));
+
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                        .header("X-Auth-Client", "admin")
+                        .cookie(new jakarta.servlet.http.Cookie("refresh_token", "user-refresh"),
+                                new jakarta.servlet.http.Cookie("admin_refresh_token", "admin-old")))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Set-Cookie",
+                        org.hamcrest.Matchers.containsString("admin_refresh_token=admin-new")))
+                .andExpect(jsonPath("$.data.accessToken").value("admin-new-access"));
     }
 
     private record RegisterBody(String username, String password, String preferences) {

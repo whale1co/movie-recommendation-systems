@@ -6,7 +6,25 @@
         <h1>AI 选片顾问</h1>
         <p>说说你和谁看、想看什么类型，或对片长和评分的要求。</p>
       </div>
+      <el-button class="history-button" :icon="Clock" @click="openHistory">历史记录</el-button>
     </header>
+
+    <el-drawer v-model="historyVisible" title="历史记录" direction="rtl" size="min(440px, 92vw)">
+      <div v-loading="historyLoading" class="history-panel">
+        <el-alert v-if="historyError" :title="historyError" type="error" show-icon />
+        <el-empty v-else-if="!historyLoading && !historyItems.length" description="还没有历史记录" :image-size="80" />
+        <div v-else class="history-list">
+          <article v-for="item in historyItems" :key="item.id" class="history-item" @click="restoreHistory(item)">
+            <div class="history-item-main">
+              <strong>{{ item.question }}</strong>
+              <p>{{ item.answerPreview }}</p>
+              <small>{{ formatHistoryDate(item.createdAt) }} · {{ item.recommendationCount }} 部 · {{ item.degraded ? '本地推荐' : 'AI 已生成' }}</small>
+            </div>
+            <el-button text type="danger" :icon="Close" aria-label="删除历史记录" @click.stop="removeHistory(item)" />
+          </article>
+        </div>
+      </div>
+    </el-drawer>
 
     <section class="advisor-composer" aria-label="选片需求">
       <el-input
@@ -148,15 +166,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Calendar, ChatDotRound, CircleCheck, Clock, Close, EditPen, Loading,
   MagicStick, Promotion, Refresh, Star, StarFilled, View, WarningFilled
 } from '@element-plus/icons-vue'
-import { askAiAdvisor, type AiAdvisorResult, type AiMovieRecommendation } from '../api/ai'
+import { askAiAdvisor, deleteAiAdvisorHistory, getAiAdvisorHistory, getAiAdvisorHistoryDetail, type AiAdvisorHistorySummary, type AiMovieRecommendation } from '../api/ai'
+import { useAiAdvisorStore } from '../store/aiAdvisor'
 import { addFavorite, getUserFavorites, removeFavorite } from '../api/favorite'
 import { resolvePosterUrl } from '../utils/poster'
 
@@ -170,10 +190,13 @@ interface AdvisorError {
 }
 
 const router = useRouter()
-const question = ref('')
-const lastQuestion = ref('')
+const advisorStore = useAiAdvisorStore()
+const { question, lastQuestion, result } = storeToRefs(advisorStore)
 const loading = ref(false)
-const result = ref<AiAdvisorResult | null>(null)
+const historyVisible = ref(false)
+const historyLoading = ref(false)
+const historyError = ref('')
+const historyItems = ref<AiAdvisorHistorySummary[]>([])
 const errorState = ref<AdvisorError | null>(null)
 const favoriteIds = ref(new Set<number>())
 const favoritePending = ref(new Set<number>())
@@ -209,13 +232,15 @@ async function submitQuestion() {
   const value = question.value.trim()
   if (!value || loading.value) return
   lastQuestion.value = value
+  advisorStore.persist()
   loading.value = true
   result.value = null
+  advisorStore.persist()
   errorState.value = null
   controller = new AbortController()
   try {
     const response = await askAiAdvisor(value, controller.signal)
-    result.value = response.data
+    advisorStore.setResult(value, response.data)
     await loadFavorites()
   } catch (error: any) {
     if (axios.isCancel(error) || error?.code === 'ERR_CANCELED') return
@@ -310,15 +335,70 @@ function onImgError(event: Event) {
   ;(event.target as HTMLImageElement).src = defaultPoster
 }
 
+async function openHistory() {
+  historyVisible.value = true
+  historyError.value = ''
+  historyLoading.value = true
+  try {
+    const response = await getAiAdvisorHistory(1, 50)
+    historyItems.value = response.data.records
+  } catch {
+    historyError.value = '历史记录加载失败，请稍后重试。'
+  } finally {
+    historyLoading.value = false
+  }
+}
+
+async function restoreHistory(item: AiAdvisorHistorySummary) {
+  try {
+    const response = await getAiAdvisorHistoryDetail(item.id)
+    advisorStore.setResult(response.data.question, response.data.result, response.data.id)
+    await loadFavorites()
+    historyVisible.value = false
+    ElMessage.success('已恢复历史推荐')
+  } catch {
+    ElMessage.error('历史详情加载失败')
+  }
+}
+
+async function removeHistory(item: AiAdvisorHistorySummary) {
+  try {
+    await ElMessageBox.confirm('删除后无法恢复，确认删除这条历史记录吗？', '删除历史记录', { type: 'warning' })
+    await deleteAiAdvisorHistory(item.id)
+    historyItems.value = historyItems.value.filter(entry => entry.id !== item.id)
+    if (advisorStore.selectedHistoryId === item.id) advisorStore.selectedHistoryId = null
+  } catch (error: any) {
+    if (error !== 'cancel' && error !== 'close') ElMessage.error('删除失败，请稍后重试')
+  }
+}
+
+function formatHistoryDate(value: string) {
+  return new Date(value).toLocaleString('zh-CN', { dateStyle: 'short', timeStyle: 'short' })
+}
+
+onMounted(async () => {
+  advisorStore.hydrate()
+  await loadFavorites()
+})
 onBeforeUnmount(() => controller?.abort())
 </script>
 
 <style scoped>
 .advisor-page { width: min(1040px, 100%); margin: 0 auto; padding-bottom: 48px; color: #243447; }
 .page-header { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+.page-header > div:nth-child(2) { flex: 1; min-width: 0; }
+.history-button { flex: 0 0 auto; }
 .header-icon { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 8px; background: #25364a; color: #fff; font-size: 23px; flex: 0 0 auto; }
 .page-header h1 { margin: 0 0 4px; font-size: 24px; line-height: 1.25; letter-spacing: 0; }
 .page-header p { margin: 0; color: #708093; font-size: 14px; }
+.history-panel { min-height: 180px; }
+.history-list { display: grid; gap: 10px; }
+.history-item { display: flex; gap: 8px; align-items: flex-start; padding: 12px; border: 1px solid #e3e8ee; border-radius: 6px; cursor: pointer; }
+.history-item:hover { border-color: #9bb8e8; background: #f8fbff; }
+.history-item-main { min-width: 0; flex: 1; }
+.history-item strong { display: block; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.45; }
+.history-item p { margin: 7px 0; color: #708093; font-size: 12px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.history-item small { color: #99a4b1; font-size: 11px; }
 .advisor-composer { padding: 18px; background: #fff; border: 1px solid #e5eaf0; border-radius: 8px; box-shadow: 0 8px 24px rgba(31, 45, 61, 0.06); }
 .advisor-composer :deep(.el-textarea__inner) { padding: 14px 15px 28px; border-radius: 6px; box-shadow: 0 0 0 1px #dce3eb inset; line-height: 1.7; }
 .composer-footer { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-top: 12px; }

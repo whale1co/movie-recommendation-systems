@@ -23,6 +23,10 @@ public record ApiResponse<T>(
         return of(HttpStatus.CREATED, message, data);
     }
 
+    public static <T> ApiResponse<T> accepted(String message, T data) {
+        return of(HttpStatus.ACCEPTED, message, data);
+    }
+
     public static <T> ApiResponse<T> error(HttpStatus status, String message) {
         return of(status, message, null);
     }

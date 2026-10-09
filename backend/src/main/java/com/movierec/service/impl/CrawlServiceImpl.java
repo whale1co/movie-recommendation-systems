@@ -27,6 +27,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 
 @Service
@@ -38,6 +40,7 @@ public class CrawlServiceImpl implements CrawlService {
     private static final String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36";
     private static final String REFERER = "https://movie.douban.com";
     private static final int PAGE_SIZE = 20;
+    private static final long MAX_POSTER_BYTES = 10L * 1024 * 1024;
 
     private static final String[] USER_AGENTS = {
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
@@ -83,11 +86,23 @@ public class CrawlServiceImpl implements CrawlService {
 
     @Override
     public Map<String, Integer> crawlTop250() {
-        return crawlMovies(13); // 13 * 20 = 260, covers Top250
+        return crawlMovies(0, 12, PAGE_SIZE, false); // 13 * 20 = 260, covers Top250
     }
 
     @Override
     public Map<String, Integer> crawlMovies(int pages) {
+        if (pages < 1) {
+            throw new IllegalArgumentException("采集页数必须大于 0");
+        }
+        return crawlMovies(0, pages - 1, PAGE_SIZE, true);
+    }
+
+    @Override
+    public Map<String, Integer> crawlMovies(int startPage, int endPage, int pageSize, boolean overwrite) {
+        if (startPage < 0 || endPage < startPage || endPage - startPage + 1 > 500) {
+            throw new IllegalArgumentException("采集页范围不合法，单次最多 500 页");
+        }
+        int effectivePageSize = pageSize < 1 ? PAGE_SIZE : Math.min(pageSize, 100);
         ensurePosterDir();
 
         CrawlLog crawlLog = new CrawlLog();
@@ -100,11 +115,11 @@ public class CrawlServiceImpl implements CrawlService {
         int failed = 0;
 
         try {
-            for (int page = 0; page < pages; page++) {
-                int start = page * PAGE_SIZE;
+            for (int page = startPage; page <= endPage; page++) {
+                int start = page * effectivePageSize;
                 String apiUrl = AJAX_API + "?sort=U&range=0,10&tags=&start=" + start;
 
-                log.info("正在爬取第{}/{}页, start={}", page + 1, pages, start);
+                log.info("正在爬取第{}/{}页, start={}", page - startPage + 1, endPage - startPage + 1, start);
 
                 try {
                     String json = fetchJson(apiUrl);
@@ -183,6 +198,9 @@ public class CrawlServiceImpl implements CrawlService {
                             Movie existing = movieMapper.selectOne(wrapper);
 
                             if (existing != null) {
+                                if (!overwrite) {
+                                    continue;
+                                }
                                 existing.setTitle(movie.getTitle());
                                 existing.setDirector(movie.getDirector());
                                 existing.setActors(movie.getActors());
@@ -207,11 +225,11 @@ public class CrawlServiceImpl implements CrawlService {
                         }
                     }
 
-                    log.info("第{}/{}页处理完成, 本页{}部", page + 1, pages, dataArr.size());
+                    log.info("第{}/{}页处理完成, 本页{}部", page - startPage + 1, endPage - startPage + 1, dataArr.size());
 
                 } catch (Exception e) {
                     failed++;
-                    log.error("爬取第{}页失败: {}", page + 1, e.getMessage());
+                    log.error("爬取第{}页失败: {}", page - startPage + 1, e.getMessage());
                 }
 
                 // 页间延迟
@@ -289,6 +307,21 @@ public class CrawlServiceImpl implements CrawlService {
 
     @Override
     public Map<String, Integer> importFromCsv() {
+        Path workDir = Path.of(System.getProperty("user.dir"));
+        return importFromCsv(workDir.resolve("douban_movies.csv"));
+    }
+
+    @Override
+    public Map<String, Integer> importFromCsv(Path suppliedMovieCsvPath) {
+        if (suppliedMovieCsvPath == null) {
+            throw new IllegalArgumentException("CSV 文件不能为空");
+        }
+        Path movieCsvPath = suppliedMovieCsvPath.toAbsolutePath().normalize();
+        Path userCsvPath = movieCsvPath.resolveSibling("douban_users.csv");
+        return importFromCsv(movieCsvPath, userCsvPath);
+    }
+
+    private Map<String, Integer> importFromCsv(Path movieCsvPath, Path userCsvPath) {
         int movieCount = 0;
         int ratingCount = 0;
         int userCount = 0;
@@ -323,9 +356,8 @@ public class CrawlServiceImpl implements CrawlService {
             }
         }
 
-        String movieCsvPath = System.getProperty("user.dir") + File.separator + "douban_movies.csv";
-        File movieCsvFile = new File(movieCsvPath);
-        if (!movieCsvFile.exists()) {
+        File movieCsvFile = movieCsvPath.toFile();
+        if (!movieCsvFile.isFile()) {
             throw new RuntimeException("找不到 douban_movies.csv: " + movieCsvPath);
         }
 
@@ -357,6 +389,19 @@ public class CrawlServiceImpl implements CrawlService {
                     if (name.isEmpty() || dataID.isEmpty()) {
                         movieFailed++;
                         continue;
+                    }
+                    if (!rate.isEmpty()) {
+                        try {
+                            BigDecimal parsedRating = new BigDecimal(rate);
+                            if (parsedRating.compareTo(BigDecimal.ZERO) < 0 || parsedRating.compareTo(BigDecimal.TEN) > 0) {
+                                throw new IllegalArgumentException("评分必须在 0 到 10 之间");
+                            }
+                        } catch (NumberFormatException ex) {
+                            throw new IllegalArgumentException("评分必须为数字");
+                        }
+                    }
+                    if (!remotePosterUrl.isEmpty() && !(remotePosterUrl.startsWith("http://") || remotePosterUrl.startsWith("https://"))) {
+                        throw new IllegalArgumentException("海报 URL 必须使用 HTTP(S) 协议");
                     }
 
                     // 已有电影也要补写空海报，避免重新导入时永久跳过缺失数据
@@ -407,10 +452,10 @@ public class CrawlServiceImpl implements CrawlService {
                         try {
                             // 尝试解析年份
                             String year = dateStr.replaceAll("[^0-9]", "").trim();
-                            if (year.length() >= 4) {
-                                movie.setReleaseDate(LocalDate.of(Integer.parseInt(year.substring(0, 4)), 1, 1));
-                            }
-                        } catch (Exception ignored) {
+                            if (year.length() < 4) throw new IllegalArgumentException("上映日期格式不正确");
+                            movie.setReleaseDate(LocalDate.of(Integer.parseInt(year.substring(0, 4)), 1, 1));
+                        } catch (Exception ex) {
+                            throw new IllegalArgumentException("上映日期格式不正确");
                         }
                     }
 
@@ -418,10 +463,10 @@ public class CrawlServiceImpl implements CrawlService {
                     if (!durationStr.isEmpty()) {
                         try {
                             String numStr = durationStr.replaceAll("[^0-9]", "").trim();
-                            if (!numStr.isEmpty()) {
-                                movie.setRuntime(Integer.parseInt(numStr));
-                            }
-                        } catch (Exception ignored) {
+                            if (numStr.isEmpty()) throw new IllegalArgumentException("片长必须为数字");
+                            movie.setRuntime(Integer.parseInt(numStr));
+                        } catch (Exception ex) {
+                            throw new IllegalArgumentException("片长必须为数字");
                         }
                     }
 
@@ -457,8 +502,7 @@ public class CrawlServiceImpl implements CrawlService {
             doubanUserIdToDbId.put(u.getUsername(), u.getId());
         }
 
-        String userCsvPath = System.getProperty("user.dir") + File.separator + "douban_users.csv";
-        File userCsvFile = new File(userCsvPath);
+        File userCsvFile = userCsvPath.toFile();
         if (!userCsvFile.exists()) {
             log.warn("找不到 douban_users.csv: {}, 跳过用户评分导入", userCsvPath);
         } else {
@@ -721,6 +765,9 @@ public class CrawlServiceImpl implements CrawlService {
     }
 
     private String downloadPoster(String doubanId, String remoteUrl) {
+        if (remoteUrl == null || !(remoteUrl.startsWith("http://") || remoteUrl.startsWith("https://"))) {
+            return null;
+        }
         try {
             File dir = new File(posterDir);
             if (!dir.isAbsolute()) {
@@ -736,6 +783,7 @@ public class CrawlServiceImpl implements CrawlService {
 
             int maxRetries = 3;
             for (int retry = 0; retry < maxRetries; retry++) {
+                File tempFile = null;
                 try {
                     URL url = new URL(remoteUrl);
                     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -744,17 +792,33 @@ public class CrawlServiceImpl implements CrawlService {
                     conn.setConnectTimeout(10000);
                     conn.setReadTimeout(10000);
 
+                    String contentType = conn.getContentType();
+                    if (contentType == null || !contentType.toLowerCase(Locale.ROOT).startsWith("image/")) {
+                        throw new IOException("远程资源不是图片");
+                    }
+                    long contentLength = conn.getContentLengthLong();
+                    if (contentLength > MAX_POSTER_BYTES) {
+                        throw new IOException("海报文件超过 10MB 限制");
+                    }
+                    tempFile = new File(outFile.getPath() + ".part");
                     try (InputStream in = conn.getInputStream();
-                         FileOutputStream out = new FileOutputStream(outFile)) {
+                         FileOutputStream out = new FileOutputStream(tempFile)) {
                         byte[] buffer = new byte[4096];
                         int bytesRead;
+                        long total = 0;
                         while ((bytesRead = in.read(buffer)) != -1) {
+                            total += bytesRead;
+                            if (total > MAX_POSTER_BYTES) throw new IOException("海报文件超过 10MB 限制");
                             out.write(buffer, 0, bytesRead);
                         }
+                    }
+                    if (!tempFile.renameTo(outFile)) {
+                        throw new IOException("保存海报文件失败");
                     }
 
                     return "/api/posters/" + fileName;
                 } catch (Exception e) {
+                    if (tempFile != null) tempFile.delete();
                     if (retry < maxRetries - 1) {
                         Thread.sleep((retry + 1) * 5000L);
                     } else {

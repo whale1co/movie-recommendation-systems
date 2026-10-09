@@ -99,7 +99,7 @@ public class AuthSessionService {
             replaced.setReplacedByTokenId(entity.getId());
             tokenMapper.updateById(replaced);
         }
-        return new AuthTokens(jwtUtil.generateAccessToken(user.getId(), user.getUsername(), sessionId),
+        return new AuthTokens(jwtUtil.generateAccessToken(user.getId(), user.getUsername(), user.getRole(), sessionId),
                 rawToken, jwtUtil.getExpirationSeconds());
     }
 

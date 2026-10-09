@@ -48,7 +48,7 @@ request.interceptors.response.use(
       const original = error.config as typeof error.config & { _retry?: boolean }
       const skipGlobalError = Boolean((original as any)?.skipGlobalError)
       const isAuthRequest = original?.url?.startsWith('/auth/')
-      if (status === 401 && !isAuthRequest && !original?._retry) {
+      if (status === 401 && accessToken.value && !isAuthRequest && !original?._retry) {
         original._retry = true
         try {
           const token = await refreshAccessToken()

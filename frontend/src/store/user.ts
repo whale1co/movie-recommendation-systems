@@ -3,10 +3,10 @@ import { ref } from 'vue'
 import { loginApi, logoutApi, registerApi } from '../api/auth'
 import { getUserInfo, updateProfile } from '../api/user'
 import { accessToken, setAccessToken } from '../utils/authState'
-import { refreshAccessToken } from '../utils/request'
 
 export const useUserStore = defineStore('user', () => {
   const token = accessToken
+  const userId = ref<number | null>(null)
   const username = ref<string>('')
   const role = ref<string>('')
   const preferences = ref<string>('')
@@ -40,7 +40,9 @@ export const useUserStore = defineStore('user', () => {
   }
 
   function clearSession() {
+    if (userId.value) sessionStorage.removeItem('movie-rec:ai-advisor:' + userId.value)
     setAccessToken('')
+    userId.value = null
     username.value = ''
     role.value = ''
     preferences.value = ''
@@ -51,6 +53,7 @@ export const useUserStore = defineStore('user', () => {
     try {
       const res: any = await getUserInfo()
       if (res.code === 200) {
+        userId.value = res.data.id ?? null
         username.value = res.data.username
         role.value = res.data.role || 'USER'
         preferences.value = res.data.preferences || ''
@@ -64,8 +67,8 @@ export const useUserStore = defineStore('user', () => {
   async function initialize() {
     if (initialized) return Boolean(token.value)
     initialized = true
+    if (!token.value) return false
     try {
-      if (!token.value) await refreshAccessToken()
       await fetchUserInfo()
       return Boolean(token.value)
     } catch {
@@ -87,6 +90,7 @@ export const useUserStore = defineStore('user', () => {
 
   return {
     token,
+    userId,
     username,
     role,
     preferences,

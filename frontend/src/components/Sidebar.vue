@@ -55,11 +55,6 @@
         <span>修改密码</span>
       </el-menu-item>
 
-      <el-menu-item index="/admin" v-if="userStore.token && userStore.role === 'ADMIN'">
-        <el-icon><Tools /></el-icon>
-        <span>管理后台</span>
-      </el-menu-item>
-
       <el-menu-item index="logout" v-if="userStore.token">
         <el-icon><SwitchButton /></el-icon>
         <span>退出系统</span>
@@ -76,7 +71,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Film, MagicStick, Star, User, Setting, SwitchButton, Search, Tools } from '@element-plus/icons-vue'
+import { Film, MagicStick, Star, User, Setting, SwitchButton, Search } from '@element-plus/icons-vue'
 import { useUserStore } from '../store/user'
 
 const route = useRoute()

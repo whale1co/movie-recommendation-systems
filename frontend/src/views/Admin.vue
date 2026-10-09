@@ -26,7 +26,6 @@
     </section>
 
     <section class="metric-strip">
-      <div class="mini-metric"><span>当前采集页数</span><strong>{{ pages }}</strong><small>页</small><el-icon><Refresh /></el-icon></div>
       <div class="mini-metric"><span>最近返回指标</span><strong>{{ stats ? Object.keys(stats).length : '--' }}</strong><small>{{ stats ? '项' : '等待任务' }}</small><el-icon><DataAnalysis /></el-icon></div>
       <div class="mini-metric"><span>数据源</span><strong>豆瓣</strong><small>电影数据</small><el-icon><Connection /></el-icon></div>
       <div class="mini-metric dark-metric"><span>海报存储</span><strong>LOCAL</strong><small>服务器本地</small><el-icon><Picture /></el-icon></div>
@@ -50,29 +49,25 @@
 
       <div class="white-panel action-panel">
         <div class="panel-title"><div><h2>快速操作</h2><span>常用维护任务</span></div><el-icon><MoreFilled /></el-icon></div>
-        <button class="action-button blue-action" :disabled="!!loadingAction" @click="handleTop250"><span><el-icon><VideoPlay /></el-icon></span><b>采集 Top 250<small>默认任务</small></b><el-icon><ArrowRight /></el-icon></button>
         <button class="action-button purple-action" :disabled="!!loadingAction" @click="handlePosters"><span><el-icon><Download /></el-icon></span><b>下载远程海报<small>保存到本地</small></b><el-icon><ArrowRight /></el-icon></button>
         <button class="action-button green-action" :disabled="!!loadingAction" @click="handleCsv"><span><el-icon><Upload /></el-icon></span><b>导入 CSV 数据<small>电影与评分</small></b><el-icon><ArrowRight /></el-icon></button>
       </div>
     </section>
 
-    <section class="white-panel task-panel">
-      <div class="panel-title task-title"><div><h2>数据任务中心</h2><span>自定义电影采集范围，任务结果会同步到上方图表。</span></div><div class="task-control"><span>采集页数</span><el-input-number v-model="pages" :min="1" :max="500" controls-position="right" /><el-button type="primary" :loading="loadingAction === 'crawl'" @click="handleCrawl"><el-icon><Refresh /></el-icon>开始采集</el-button></div></div>
-    </section>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { ArrowRight, Calendar, CircleCheckFilled, Connection, DataAnalysis, Download, Loading, Monitor, MoreFilled, Picture, QuestionFilled, Refresh, TrendCharts, Upload, VideoPlay } from '@element-plus/icons-vue'
-import { crawlMovies, crawlTop250, fetchPosters, getAdminHealth, importCsv } from '../api/admin'
+import { ArrowRight, Calendar, CircleCheckFilled, Connection, DataAnalysis, Download, Loading, Monitor, MoreFilled, Picture, QuestionFilled, Refresh, TrendCharts, Upload } from '@element-plus/icons-vue'
+import { fetchPosters, getAdminHealth, importCsv } from '../api/admin'
 
-const pages = ref(13); const loadingAction = ref(''); const lastMessage = ref(''); const lastMessageType = ref<'success' | 'error'>('success'); const lastTaskLabel = ref(''); const stats = ref<Record<string, number> | null>(null); const health = ref<{ status?: string; timestamp?: number; movieCount?: number; userCount?: number; ratingCount?: number }>({})
+const loadingAction = ref(''); const lastMessage = ref(''); const lastMessageType = ref<'success' | 'error'>('success'); const lastTaskLabel = ref(''); const stats = ref<Record<string, number> | null>(null); const health = ref<{ status?: string; timestamp?: number; movieCount?: number; userCount?: number; ratingCount?: number }>({})
 const today = new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' })
-const taskLabels: Record<string, string> = { crawl: '豆瓣电影采集', top250: '豆瓣 Top 250 采集', posters: '远程海报下载', csv: 'CSV 数据导入', health: '服务健康检查' }
+const taskLabels: Record<string, string> = { posters: '远程海报下载', csv: 'CSV 数据导入', health: '服务健康检查' }
 const summaryItems = computed(() => [{ label: '电影总数', value: health.value.movieCount ?? '--', color: 'blue' }, { label: '用户总数', value: health.value.userCount ?? '--', color: 'lilac' }, { label: '评分记录', value: health.value.ratingCount ?? '--', color: 'pink' }, { label: 'API 服务', value: health.value.status === 'OK' ? 'ONLINE' : 'OFFLINE', color: 'yellow' }])
-const recentTasks = computed(() => [{ label: '豆瓣电影采集', detail: lastTaskLabel.value === '豆瓣电影采集' ? '最近刚刚完成' : '按页获取电影数据', color: 'blue', icon: Refresh, done: lastTaskLabel.value === '豆瓣电影采集' }, { label: '海报本地化', detail: lastTaskLabel.value === '远程海报下载' ? '远程资源已处理' : '等待执行下载', color: 'purple', icon: Picture, done: lastTaskLabel.value === '远程海报下载' }, { label: 'CSV 数据导入', detail: '电影与评分数据', color: 'green', icon: Upload, done: lastTaskLabel.value === 'CSV 数据导入' }])
+const recentTasks = computed(() => [{ label: '海报本地化', detail: lastTaskLabel.value === '远程海报下载' ? '远程资源已处理' : '等待执行下载', color: 'purple', icon: Picture, done: lastTaskLabel.value === '远程海报下载' }, { label: 'CSV 数据导入', detail: '电影与评分数据', color: 'green', icon: Upload, done: lastTaskLabel.value === 'CSV 数据导入' }])
 const barRows = computed(() => { const entries = stats.value ? Object.entries(stats.value).slice(0, 5) : [['电影', health.value.movieCount ?? 0], ['用户', health.value.userCount ?? 0], ['评分', health.value.ratingCount ?? 0]] as [string, number][]; const max = Math.max(...entries.map(([, value]) => value), 1); return entries.filter(([, value]) => value > 0).map(([key, value]) => ({ key, value, percent: Math.max(8, Math.round((value / max) * 100)) })) })
 const chartValues = computed(() => stats.value ? Object.values(stats.value).slice(0, 6) : [health.value.movieCount ?? 0, health.value.userCount ?? 0, health.value.ratingCount ?? 0])
 const hasChartData = computed(() => chartValues.value.some(value => value > 0))
@@ -82,8 +77,6 @@ const chartLabels = computed(() => stats.value ? Object.keys(stats.value).slice(
 
 onMounted(handleHealth)
 async function runTask(action: string, task: () => Promise<any>, successText: string) { loadingAction.value = action; lastMessage.value = ''; try { const res: any = await task(); if (res.code !== 200) throw new Error(res.message || `${successText}失败`); stats.value = res.data || null; lastTaskLabel.value = taskLabels[action]; lastMessageType.value = 'success'; lastMessage.value = res.message || successText; ElMessage.success(lastMessage.value) } catch (error: any) { lastMessageType.value = 'error'; lastMessage.value = error.message || `${successText}失败`; ElMessage.error(lastMessage.value) } finally { loadingAction.value = '' } }
-function handleCrawl() { return runTask('crawl', () => crawlMovies(pages.value), '电影采集完成') }
-function handleTop250() { return runTask('top250', crawlTop250, '豆瓣 Top 250 采集完成') }
 function handlePosters() { return runTask('posters', fetchPosters, '海报下载完成') }
 function handleCsv() { return runTask('csv', importCsv, 'CSV 导入完成') }
 async function handleHealth() { loadingAction.value = 'health'; try { const res: any = await getAdminHealth(); if (res.code === 200) health.value = res.data || {} } finally { loadingAction.value = '' } }

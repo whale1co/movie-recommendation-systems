@@ -2,6 +2,10 @@ server:
   port: 8080
 
 spring:
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
   datasource:
     url: ${DB_URL:jdbc:mysql://localhost:3306/movie_rec?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
     username: ${DB_USERNAME:root}
@@ -29,7 +33,7 @@ movie:
 
 app:
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174}
   ai:
     provider: ${LLM_PROVIDER:fake}
     base-url: ${LLM_BASE_URL:http://localhost:11434/v1}
@@ -53,6 +57,12 @@ jwt:
   expiration-ms: ${JWT_EXPIRATION_MS:900000}
   refresh-expiration-seconds: ${JWT_REFRESH_EXPIRATION_SECONDS:604800}
   refresh-cookie-secure: ${JWT_REFRESH_COOKIE_SECURE:false}
+
+admin:
+  bootstrap:
+    enabled: ${ADMIN_BOOTSTRAP_ENABLED:false}
+    username: ${ADMIN_BOOTSTRAP_USERNAME:}
+    password: ${ADMIN_BOOTSTRAP_PASSWORD:}
 
 security:
   login:

@@ -13,6 +13,7 @@ public interface UserService {
     UserProfileVO getProfile(Long userId);
     UserProfileVO updateProfile(Long userId, String oldPassword, String newPassword, String preferences);
     PageResponse<UserProfileVO> listAdminUsers(long current, long size);
+    PageResponse<UserProfileVO> listAdminUsers(long current, long size, String keyword, String status, String role);
     UserProfileVO createAdminUser(AdminUserCreateRequest request);
     UserProfileVO updateAdminUser(Long operatorId, Long userId, AdminUserUpdateRequest request);
     UserProfileVO getAdminUser(Long userId);

@@ -36,18 +36,21 @@ public class JwtUtil {
     }
 
     public String generateAccessToken(Long userId, String username, String sessionId) {
+        return generateAccessToken(userId, username, null, sessionId);
+    }
+
+    public String generateAccessToken(Long userId, String username, String role, String sessionId) {
         Date now = new Date();
         Date expire = new Date(now.getTime() + expiration);
-
-        return Jwts.builder()
+        var builder = Jwts.builder()
                 .setSubject(String.valueOf(userId))
                 .claim("userId", userId)
                 .claim("username", username)
                 .claim("sessionId", sessionId)
                 .setIssuedAt(now)
-                .setExpiration(expire)
-                .signWith(key, SignatureAlgorithm.HS256)
-                .compact();
+                .setExpiration(expire);
+        if (role != null && !role.isBlank()) builder.claim("role", role);
+        return builder.signWith(key, SignatureAlgorithm.HS256).compact();
     }
 
     public long getExpirationSeconds() {
@@ -66,6 +69,10 @@ public class JwtUtil {
 
     public String getSessionIdFromToken(String token) {
         return parseToken(token).get("sessionId", String.class);
+    }
+
+    public String getRoleFromToken(String token) {
+        return parseToken(token).get("role", String.class);
     }
 
     public boolean validateToken(String token) {

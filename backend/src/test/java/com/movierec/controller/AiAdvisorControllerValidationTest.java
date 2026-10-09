@@ -1,6 +1,7 @@
 package com.movierec.controller;
 
 import com.movierec.ai.service.AiAdvisorService;
+import com.movierec.service.AiAdvisorHistoryService;
 import com.movierec.common.RequestIdFilter;
 import com.movierec.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.Test;
@@ -17,7 +18,7 @@ class AiAdvisorControllerValidationTest {
     @Test
     void overlongQuestionReturnsBadRequest() throws Exception {
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(
-                        new AiAdvisorController(mock(AiAdvisorService.class)))
+                        new AiAdvisorController(mock(AiAdvisorService.class), mock(AiAdvisorHistoryService.class)))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .addFilters(new RequestIdFilter())
                 .build();
